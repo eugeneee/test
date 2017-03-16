@@ -1,0 +1,38 @@
+---
+- name: Get Device Facts
+  hosts: HAN
+  connection: local
+  gather_facts: no
+  vars:
+    credentials:
+      hosts: "{{ ansible_ssh_host }}"
+      ports: "{{ netconf_port }}"
+      username: "{{ ansible_ssh_user }}"
+      password: "{{ ansible_ssh_pass }}"
+  
+  tasks:
+  - name: Checking NETCONF connectivity
+    wait_for: host={{ ansible_ssh_host }} port={{ netconf_port }} timeout=5
+   
+  - name: Retrieve information from devices runnning Junos OS
+    junos_facts:
+      host: "{{ ansible_ssh_host }}"
+      provider: "{{ credentials }}"
+      config: no
+    register: junos
+   
+  - name: Show version
+#    debug: msg="Router {{ inventory_hostname }} is running {{ version }}"
+    debug:
+      var: junos.ansible_facts.version
+      
+  - name: run show version on remote devices
+    junos_command:
+      host: "{{ ansible_ssh_host }}"
+      provider: "{{ credentials }}"
+      commands: "show interface terse ge-0/0/*"
+    register: junos
+    
+  - name: Show interfaces
+    debug: var=item
+    with_items: "{{junos.stdout[0] }}"
